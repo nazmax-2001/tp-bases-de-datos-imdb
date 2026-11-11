@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo IMDb</title>
+<meta name="description" content="Tablero interactivo de la base de datos relacional del catálogo cinematográfico de IMDb. Trabajo Integrador Final de Bases de Datos, FIUNER.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Big+Shoulders+Display:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --terciopelo: #6b1426;
+  --terciopelo-hondo: #4a0d1a;
+  --dorado: #c9a227;
+  --lampara: #ffe9a8;
+  --fondo: #f2f1f4;
+  --papel: #ffffff;
+  --tinta: #211a26;
+  --tinta-2: #5a5160;
+  --linea: #dcd8e0;
+  --linea-suave: #ebe8ee;
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+  --foco: #2a78d6;
+  --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --texto: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font: 16px/1.5 var(--texto);
+}
+a { color: var(--terciopelo); }
+:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.contenedor { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- Marquesina ---------- */
+.marquesina {
+  background: var(--terciopelo);
+  color: var(--lampara);
+  padding: 28px 0 32px;
+}
+.cartel {
+  position: relative;
+  padding: 26px 30px 24px;
+  border-radius: 14px;
+  border: 7px dotted var(--lampara);
+  background: var(--terciopelo-hondo);
+  box-shadow: 0 0 0 4px var(--terciopelo-hondo), 0 0 22px rgba(255, 233, 168, .25);
+}
+.cartel h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: .95;
+  letter-spacing: .01em;
+  margin: 0 0 6px;
+  color: var(--dorado);
+}
+.cartel .bajada { margin: 0 0 22px; color: #f3dfe3; max-width: 62ch; }
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+}
+.cifras div { border-top: 1px solid rgba(255, 233, 168, .35); padding-top: 8px; }
+.cifras dt { font-size: .9rem; color: #f3dfe3; order: 2; }
+.cifras dd {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+  line-height: 1.05;
+  color: var(--lampara);
+  font-variant-numeric: tabular-nums;
+}
+.cifras div { display: flex; flex-direction: column; }
+.cifras dd { order: 1; }
+
+/* ---------- Navegación y filtros ---------- */
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--papel);
+  border-bottom: 1px solid var(--linea);
+}
+.pestanas { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.pestanas button {
+  font: 700 1rem var(--texto);
+  color: var(--tinta-2);
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 14px 14px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pestanas button[aria-selected="true"] { color: var(--terciopelo); border-bottom-color: var(--terciopelo); }
+.pestanas button:hover { color: var(--tinta); }
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: end;
+  padding: 16px 0 4px;
+}
+.filtros label { display: flex; flex-direction: column; font-size: .875rem; color: var(--tinta-2); gap: 4px; }
+.filtros input, .filtros select, .buscador input, .buscador select {
+  font: 1rem var(--texto);
+  color: var(--tinta);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: var(--papel);
+  min-width: 0;
+}
+.filtros input[type="number"] { width: 6.5rem; }
+.filtros input[type="search"] { width: 15rem; }
+.filtros .limpiar {
+  font: 1rem var(--texto);
+  border: 1px solid var(--linea);
+  background: var(--fondo);
+  border-radius: 6px;
+  padding: 7px 12px;
+  cursor: pointer;
+  color: var(--tinta);
+}
+.resumen-filtro { color: var(--tinta-2); font-size: .9rem; margin: 6px 0 0; padding-bottom: 14px; }
+.zona-filtros { background: var(--papel); border-bottom: 1px solid var(--linea); }
+.zona-filtros[hidden] { display: none; }
+
+/* ---------- Secciones ---------- */
+main { padding: 28px 0 64px; }
+.vista[hidden] { display: none; }
+h2 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 2rem;
+  line-height: 1.1;
+  margin: 0 0 4px;
+}
+h3 { font-size: 1.1rem; margin: 0 0 8px; }
+.intro { color: var(--tinta-2); margin: 0 0 20px; max-width: 72ch; }
+.panel { background: var(--papel); border: 1px solid var(--linea); border-radius: 8px; }
+
+/* Películas: tabla + ficha */
+.dos-columnas { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+.tabla-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--linea-suave); vertical-align: top; }
+th { font-size: .875rem; color: var(--tinta-2); font-weight: 700; white-space: nowrap; background: var(--papel); }
+td.num, th.num { text-align: right; }
+th button {
+  text-align: left; font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+  display: inline-flex; gap: 4px; align-items: center;
+}
+th button .flecha { opacity: .35; font-size: .75rem; }
+th[aria-sort] button { color: var(--tinta); }
+th[aria-sort] button .flecha { opacity: 1; }
+tbody tr.fila { cursor: pointer; }
+tbody tr.fila:hover { background: #f7f5f8; }
+tbody tr.fila[aria-selected="true"] { background: #f6e9ec; box-shadow: inset 4px 0 0 var(--terciopelo); }
+.titulo-celda { font-weight: 700; }
+.chico { color: var(--tinta-2); font-size: .875rem; }
+.bloque { display: block; }
+.vacio { padding: 28px 16px; color: var(--tinta-2); }
+
+.ficha { position: sticky; top: 64px; padding: 22px 22px 24px; }
+.ficha h3.nombre {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.9rem;
+  line-height: 1;
+  margin: 0 0 6px;
+}
+.etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 16px; padding: 0; list-style: none; }
+.etiquetas li { background: var(--fondo); border-radius: 999px; padding: 2px 10px; font-size: .875rem; }
+.datos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 0 0 18px; }
+.datos dt { font-size: .8rem; color: var(--tinta-2); }
+.datos dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.equipo { margin: 0 0 14px; }
+.equipo h4 { font-size: .875rem; color: var(--tinta-2); margin: 0 0 4px; font-weight: 700; }
+.equipo ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.enlace {
+  font: inherit; color: var(--terciopelo); background: none; border: 0; padding: 0;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: left;
+}
+.enlace:hover { color: var(--terciopelo-hondo); }
+.lista-simple { margin: 0 0 12px; padding-left: 18px; }
+
+/* Personas */
+.buscador { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+.buscador input { width: 18rem; }
+.lista-personas { max-height: 640px; overflow-y: auto; }
+
+/* Gráficos */
+.grilla-graficos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.grafico { padding: 18px 18px 14px; }
+.grafico p { margin: 0 0 10px; color: var(--tinta-2); font-size: .9rem; }
+.grafico svg { display: block; max-width: 100%; overflow: visible; }
+.grafico .ancho { grid-column: 1 / -1; }
+.leyenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: .875rem; color: var(--tinta-2); margin: 8px 0 0; padding: 0; list-style: none; }
+.leyenda li { display: flex; align-items: center; gap: 6px; }
+.leyenda i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+svg text { font-family: var(--texto); fill: var(--tinta-2); font-size: 12px; }
+svg .eje { stroke: var(--tinta-2); stroke-width: 1; }
+svg .grilla { stroke: var(--linea-suave); stroke-width: 1; }
+svg .marca { cursor: pointer; }
+svg .marca:hover, svg .marca:focus { stroke: var(--tinta); stroke-width: 2; outline: none; }
+.tooltip {
+  position: fixed; z-index: 20; pointer-events: none;
+  background: var(--tinta); color: #fff; font-size: .85rem; line-height: 1.35;
+  padding: 7px 10px; border-radius: 6px; max-width: 260px;
+  opacity: 0; transition: opacity .12s;
+}
+.tooltip.visible { opacity: 1; }
+
+/* Consultas */
+details.consulta { margin: 0 0 12px; }
+details.consulta summary {
+  cursor: pointer; padding: 16px 20px; list-style: none; display: flex; gap: 14px; align-items: baseline;
+}
+details.consulta summary::-webkit-details-marker { display: none; }
+details.consulta summary .n {
+  font-family: var(--display); font-weight: 800; font-size: 1.6rem; color: var(--terciopelo); min-width: 1.6em;
+}
+details.consulta summary .que { font-weight: 700; display: block; }
+details.consulta summary .como { color: var(--tinta-2); font-size: .9rem; }
+details.consulta[open] summary { border-bottom: 1px solid var(--linea-suave); }
+.consulta-cuerpo { padding: 16px 20px 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; max-width: 900px; }
+pre {
+  margin: 0; background: #241c29; color: #f1ecf3; border-radius: 6px; padding: 14px 16px;
+  font: .85rem/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; overflow-x: auto;
+}
+.cuantas { color: var(--tinta-2); font-size: .875rem; margin: 0 0 6px; }
+
+footer { color: var(--tinta-2); font-size: .875rem; padding: 0 0 40px; }
+
+@media (max-width: 980px) {
+  .dos-columnas { grid-template-columns: 1fr; }
+  .ficha { position: static; }
+  .grilla-graficos { grid-template-columns: 1fr; }
+  .cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .contenedor { padding: 0 16px; }
+  .cartel { padding: 22px 20px 20px; }
+  .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filtros input[type="search"], .buscador input { width: 100%; }
+  .filtros label { flex: 1 1 40%; }
+  .datos { grid-template-columns: 1fr; }
+  .cartel h1 { font-size: 2.3rem; }
+  .cartel .bajada { font-size: .9rem; margin-bottom: 16px; }
+  .cifras { gap: 12px; }
+  .cifras div:last-child { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="marquesina">
+  <div class="contenedor">
+    <div class="cartel">
+      <h1>Catálogo cinematográfico IMDb</h1>
+      <p class="bajada">Tablero de la base de datos relacional del Trabajo Integrador Final de Bases de Datos (FIUNER), por Máximo Nazarena y Pastori Ana. Los números cambian con los filtros.</p>
+      <dl class="cifras" id="cifras"></dl>
+    </div>
+  </div>
+</header>
+
+<div class="barra">
+  <div class="contenedor">
+    <nav class="pestanas" role="tablist" aria-label="Secciones del tablero" id="pestanas">
+      <button role="tab" id="tab-peliculas" aria-controls="vista-peliculas" data-vista="peliculas">Películas</button>
+      <button role="tab" id="tab-personas" aria-controls="vista-personas" data-vista="personas">Personas</button>
+      <button role="tab" id="tab-graficos" aria-controls="vista-graficos" data-vista="graficos">Gráficos</button>
+      <button role="tab" id="tab-consultas" aria-controls="vista-consultas" data-vista="consultas">Consultas SQL</button>
+    </nav>
+  </div>
+</div>
+<div class="zona-filtros" id="zona-filtros">
+  <div class="contenedor">
+    <form class="filtros" id="filtros" onsubmit="return false">
+      <label>Título
+        <input type="search" id="f-titulo" placeholder="Buscar una película" autocomplete="off">
+      </label>
+      <label>Género
+        <select id="f-genero"><option value="">Todos</option></select>
+      </label>
+      <label>Estrenada desde
+        <input type="number" id="f-desde" inputmode="numeric">
+      </label>
+      <label>hasta
+        <input type="number" id="f-hasta" inputmode="numeric">
+      </label>
+      <button type="button" class="limpiar" id="f-limpiar">Quitar filtros</button>
+    </form>
+    <p class="resumen-filtro" id="resumen-filtro" aria-live="polite"></p>
+  </div>
+</div>
+
+<main class="contenedor">
+
+  <section class="vista" id="vista-peliculas" role="tabpanel" aria-labelledby="tab-peliculas">
+    <h2>Películas</h2>
+    <p class="intro">Elegí una película para ver su ficha completa: géneros, idiomas, lugares de filmación y quién participó en cada rol. Las columnas se ordenan con un clic en el encabezado.</p>
+    <div class="dos-columnas">
+      <div class="panel tabla-scroll">
+        <table id="tabla-peliculas">
+          <thead><tr>
+            <th data-col="titulo_pelicula"><button type="button">Título <span class="flecha">↕</span></button></th>
+            <th data-col="anio_estreno" class="num"><button type="button">Año <span class="flecha">↕</span></button></th>
+            <th data-col="presupuesto" class="num"><button type="button">Presupuesto<br>(M USD) <span class="flecha">↕</span></button></th>
+            <th data-col="recaudacion" class="num"><button type="button">Recaudación<br>(M USD) <span class="flecha">↕</span></button></th>
+            <th data-col="retorno" class="num"><button type="button">Retorno <span class="flecha">↕</span></button></th>
+            <th data-col="puntuacion_promedio" class="num"><button type="button">Puntuación <span class="flecha">↕</span></button></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <aside class="panel ficha" id="ficha-pelicula" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-personas" role="tabpanel" aria-labelledby="tab-personas" hidden>
+    <h2>Personas</h2>
+    <p class="intro">Elenco y equipo técnico del catálogo. Elegí una persona para ver en qué películas participó y con qué rol; desde ahí podés volver a la ficha de cada película.</p>
+    <div class="buscador">
+      <input type="search" id="p-nombre" placeholder="Buscar por nombre" aria-label="Buscar persona por nombre" autocomplete="off">
+      <select id="p-rol" aria-label="Filtrar por rol"><option value="">Todos los roles</option></select>
+    </div>
+    <div class="dos-columnas">
+      <div class="panel tabla-scroll lista-personas">
+        <table id="tabla-personas">
+          <thead><tr><th>Nombre</th><th>Nacionalidad</th><th>Roles</th><th class="num">Películas</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <aside class="panel ficha" id="ficha-persona" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-graficos" role="tabpanel" aria-labelledby="tab-graficos" hidden>
+    <h2>Gráficos</h2>
+    <p class="intro">Los gráficos usan las películas que dejan pasar los filtros. Pasá el cursor por una marca para ver el detalle; en el primer gráfico, un clic abre la ficha de la película.</p>
+    <div class="grilla-graficos">
+      <figure class="panel grafico ancho" style="grid-column: 1 / -1; margin: 0">
+        <h3>Presupuesto y recaudación</h3>
+        <p>Cada punto es una película, en escala logarítmica. Por encima de la línea punteada recaudó más de lo que costó.</p>
+        <div id="g-dispersion"></div>
+        <ul class="leyenda" id="g-dispersion-leyenda"></ul>
+      </figure>
+      <figure class="panel grafico" style="margin: 0">
+        <h3>Películas por género</h3>
+        <p>Una película puede tener varios géneros, por eso la suma supera el total.</p>
+        <div id="g-generos"></div>
+      </figure>
+      <figure class="panel grafico" style="margin: 0">
+        <h3>Puntuación media por década</h3>
+        <p>Promedio de la puntuación en IMDb de las películas estrenadas en cada década. El eje empieza en 6 para que se vean las diferencias.</p>
+        <div id="g-decadas"></div>
+      </figure>
+      <figure class="panel grafico ancho" style="grid-column: 1 / -1; margin: 0">
+        <h3>Participación femenina por rol</h3>
+        <p>Porcentaje de participaciones de mujeres en cada rol, sobre las películas filtradas.</p>
+        <div id="g-mujeres"></div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-consultas" role="tabpanel" aria-labelledby="tab-consultas" hidden>
+    <h2>Consultas SQL</h2>
+    <p class="intro">Las 9 consultas del trabajo, leídas del archivo 03_consultas.sql y ejecutadas sobre la base PostgreSQL al generar el tablero. Abrí cada una para ver el SQL y el resultado.</p>
+    <div id="consultas"></div>
+  </section>
+
+</main>
+
+<footer class="contenedor" id="pie"></footer>
+<div class="tooltip" id="tooltip" role="status"></div>
+
+<script>
+const DATOS = /*__DATOS__*/null;
+
+/* ---------- Utilidades ---------- */
+const $ = (sel) => document.querySelector(sel);
+const nf1 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+const nf2 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+const nf0 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
+const millones = (v) => nf1.format(v / 1e6);
+function el(tag, props = {}, ...hijos) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const h of hijos) if (h != null) e.append(h);
+  return e;
+}
+function formatearValor(v) {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "number") {
+    if (Number.isInteger(v)) return Math.abs(v) >= 10000 ? nf0.format(v) : String(v);
+    return Math.abs(v) >= 10000 ? nf0.format(v) : nf2.format(v);
+  }
+  return String(v);
+}
+
+/* ---------- Índices ---------- */
+const peliculas = DATOS.peliculas.map((p) => ({ ...p, retorno: p.recaudacion / p.presupuesto }));
+const porIdPelicula = new Map(peliculas.map((p) => [p.id_pelicula, p]));
+const porIdPersona = new Map(DATOS.personas.map((p) => [p.id_persona, p]));
+const ORDEN_ROLES = ["Director", "Guionista", "Actor Principal", "Actor Secundario", "Compositor"];
+const partPorPelicula = new Map();
+const partPorPersona = new Map();
+for (const pa of DATOS.participaciones) {
+  if (!partPorPelicula.has(pa.id_pelicula)) partPorPelicula.set(pa.id_pelicula, []);
+  if (!partPorPersona.has(pa.id_persona)) partPorPersona.set(pa.id_persona, []);
+  partPorPelicula.get(pa.id_pelicula).push(pa);
+  partPorPersona.get(pa.id_persona).push(pa);
+}
+const directores = (idPel) =>
+  (partPorPelicula.get(idPel) || []).filter((pa) => pa.nombre_rol === "Director")
+    .map((pa) => porIdPersona.get(pa.id_persona).nombre_persona);
+const epoca = (anio) => (anio < 2000 ? 0 : anio < 2010 ? 1 : 2);
+const EPOCAS = ["Antes de 2000", "2000 a 2009", "2010 en adelante"];
+const COLORES_EPOCA = ["var(--serie-1)", "var(--serie-2)", "var(--serie-3)"];
+
+/* ---------- Estado ---------- */
+const anios = peliculas.map((p) => p.anio_estreno);
+const ANIO_MIN = Math.min(...anios), ANIO_MAX = Math.max(...anios);
+const estado = {
+  vista: "peliculas",
+  titulo: "", genero: "", desde: ANIO_MIN, hasta: ANIO_MAX,
+  orden: { col: "puntuacion_promedio", dir: -1 },
+  peliculaElegida: null, personaElegida: null,
+  pNombre: "", pRol: "",
+};
+
+function peliculasFiltradas() {
+  const t = estado.titulo.trim().toLowerCase();
+  return peliculas.filter((p) =>
+    (!t || p.titulo_pelicula.toLowerCase().includes(t)) &&
+    (!estado.genero || p.generos.includes(estado.genero)) &&
+    p.anio_estreno >= estado.desde && p.anio_estreno <= estado.hasta);
+}
+
+/* ---------- Cifras de la marquesina ---------- */
+function dibujarCifras(lista) {
+  const ids = new Set(lista.map((p) => p.id_pelicula));
+  const parts = DATOS.participaciones.filter((pa) => ids.has(pa.id_pelicula));
+  const personas = new Set(parts.map((pa) => pa.id_persona));
+  const recaud = lista.reduce((s, p) => s + p.recaudacion, 0);
+  const media = lista.length ? lista.reduce((s, p) => s + p.puntuacion_promedio, 0) / lista.length : 0;
+  const cifras = [
+    [String(lista.length), lista.length === 1 ? "película" : "películas"],
+    [String(personas.size), "personas en elenco y equipo"],
+    [String(parts.length), "participaciones"],
+    [nf1.format(recaud / 1e9), "miles de millones de USD recaudados"],
+    [lista.length ? nf2.format(media) : "—", "puntuación media en IMDb"],
+  ];
+  const dl = $("#cifras");
+  dl.replaceChildren(...cifras.map(([v, t]) => el("div", {}, el("dt", { text: t }), el("dd", { text: v }))));
+}
+
+/* ---------- Películas ---------- */
+function dibujarTablaPeliculas(lista) {
+  const { col, dir } = estado.orden;
+  const ordenada = [...lista].sort((a, b) => {
+    const x = a[col], y = b[col];
+    return (typeof x === "string" ? x.localeCompare(y, "es") : x - y) * dir;
+  });
+  document.querySelectorAll("#tabla-peliculas th[data-col]").forEach((th) => {
+    if (th.dataset.col === col) th.setAttribute("aria-sort", dir === 1 ? "ascending" : "descending");
+    else th.removeAttribute("aria-sort");
+    th.querySelector(".flecha").textContent = th.dataset.col === col ? (dir === 1 ? "↑" : "↓") : "↕";
+  });
+  const tbody = $("#tabla-peliculas tbody");
+  if (!ordenada.length) {
+    tbody.replaceChildren(el("tr", {}, el("td", { colspan: "6", class: "vacio",
+      text: "Ninguna película cumple los filtros. Probá con otro género o un rango de años más amplio." })));
+    return;
+  }
+  tbody.replaceChildren(...ordenada.map((p) => {
+    const tr = el("tr", {
+      class: "fila", tabindex: "0",
+      "aria-selected": String(p.id_pelicula === estado.peliculaElegida),
+      onclick: () => elegirPelicula(p.id_pelicula),
+      onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); elegirPelicula(p.id_pelicula); } },
+    },
+      el("td", {}, el("span", { class: "titulo-celda", text: p.titulo_pelicula }),
+        el("span", { class: "chico bloque", text: p.generos.join(", ") +
+          (directores(p.id_pelicula).length ? ". Dirección: " + directores(p.id_pelicula).join(" y ") : "") })),
+      el("td", { class: "num", text: p.anio_estreno }),
+      el("td", { class: "num", text: millones(p.presupuesto) }),
+      el("td", { class: "num", text: millones(p.recaudacion) }),
+      el("td", { class: "num", text: nf1.format(p.retorno) + " ×" }),
+      el("td", { class: "num", text: nf1.format(p.puntuacion_promedio) }),
+    );
+    return tr;
+  }));
+}
+
+function elegirPelicula(id, irAVista = false) {
+  estado.peliculaElegida = id;
+  if (irAVista) {
+    // si la película quedó afuera por los filtros, se limpian para poder verla
+    if (!peliculasFiltradas().some((p) => p.id_pelicula === id)) limpiarFiltros(false);
+    mostrarVista("peliculas");
+  }
+  actualizar();
+  if (irAVista) $("#ficha-pelicula").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function dibujarFichaPelicula() {
+  const ficha = $("#ficha-pelicula");
+  const p = porIdPelicula.get(estado.peliculaElegida);
+  if (!p) {
+    ficha.replaceChildren(el("p", { class: "vacio", text: "Elegí una película de la tabla para ver su ficha." }));
+    return;
+  }
+  const parts = partPorPelicula.get(p.id_pelicula) || [];
+  const porRol = ORDEN_ROLES.map((rol) => [rol, parts.filter((pa) => pa.nombre_rol === rol)]).filter(([, l]) => l.length);
+  const datos = [
+    ["Puntuación en IMDb", nf1.format(p.puntuacion_promedio)],
+    ["Votos", nf0.format(p.cantidad_de_votos)],
+    ["Presupuesto", millones(p.presupuesto) + " M USD"],
+    ["Recaudación", millones(p.recaudacion) + " M USD"],
+    ["Retorno", nf1.format(p.retorno) + " veces lo invertido"],
+    ["Estreno", String(p.anio_estreno)],
+  ];
+  ficha.replaceChildren(
+    el("h3", { class: "nombre", text: p.titulo_pelicula }),
+    el("ul", { class: "etiquetas", "aria-label": "Géneros" }, ...p.generos.map((g) => el("li", { text: g }))),
+    el("dl", { class: "datos" }, ...datos.flatMap(([t, v]) => [el("div", {}, el("dt", { text: t }), el("dd", { text: v }))])),
+    porRol.length
+      ? el("div", {}, ...porRol.map(([rol, lista]) => el("div", { class: "equipo" },
+          el("h4", { text: rol }),
+          el("ul", {}, ...lista.map((pa) => el("li", {}, el("button", {
+            type: "button", class: "enlace",
+            text: porIdPersona.get(pa.id_persona).nombre_persona,
+            onclick: () => elegirPersona(pa.id_persona, true),
+          })))))))
+      : el("p", { class: "chico", text: "Esta película todavía no tiene elenco ni equipo cargado en la base." }),
+    el("div", { class: "equipo" }, el("h4", { text: p.idiomas.length > 1 ? "Idiomas" : "Idioma" }),
+      el("p", { style: "margin:0", text: p.idiomas.join(", ") })),
+    el("div", { class: "equipo" }, el("h4", { text: p.lugares.length > 1 ? "Lugares de filmación" : "Lugar de filmación" }),
+      el("p", { style: "margin:0", text: p.lugares.join("; ") })),
+  );
+}
+
+/* ---------- Personas ---------- */
+function rolesDe(idPersona) {
+  const roles = new Set((partPorPersona.get(idPersona) || []).map((pa) => pa.nombre_rol));
+  return ORDEN_ROLES.filter((r) => roles.has(r));
+}
+function dibujarPersonas() {
+  const t = estado.pNombre.trim().toLowerCase();
+  const lista = DATOS.personas.filter((pe) =>
+    (!t || pe.nombre_persona.toLowerCase().includes(t)) &&
+    (!estado.pRol || rolesDe(pe.id_persona).includes(estado.pRol)));
+  const tbody = $("#tabla-personas tbody");
+  if (!lista.length) {
+    tbody.replaceChildren(el("tr", {}, el("td", { colspan: "4", class: "vacio", text: "Nadie coincide con esa búsqueda." })));
+  } else {
+    tbody.replaceChildren(...lista.map((pe) => {
+      const pelis = new Set((partPorPersona.get(pe.id_persona) || []).map((pa) => pa.id_pelicula));
+      return el("tr", {
+        class: "fila", tabindex: "0",
+        "aria-selected": String(pe.id_persona === estado.personaElegida),
+        onclick: () => elegirPersona(pe.id_persona),
+        onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); elegirPersona(pe.id_persona); } },
+      },
+        el("td", { class: "titulo-celda", text: pe.nombre_persona }),
+        el("td", { class: "chico", text: pe.nombre_nacionalidad }),
+        el("td", { class: "chico", text: rolesDe(pe.id_persona).join(", ") }),
+        el("td", { class: "num", text: pelis.size }),
+      );
+    }));
+  }
+  const ficha = $("#ficha-persona");
+  const pe = porIdPersona.get(estado.personaElegida);
+  if (!pe) {
+    ficha.replaceChildren(el("p", { class: "vacio", text: "Elegí una persona de la lista para ver su filmografía en el catálogo." }));
+    return;
+  }
+  const porPeli = new Map();
+  for (const pa of partPorPersona.get(pe.id_persona) || []) {
+    if (!porPeli.has(pa.id_pelicula)) porPeli.set(pa.id_pelicula, { id_pelicula: pa.id_pelicula, peli: porIdPelicula.get(pa.id_pelicula), roles: [] });
+    porPeli.get(pa.id_pelicula).roles.push(pa.nombre_rol);
+  }
+  const parts = [...porPeli.values()].sort((a, b) => a.peli.anio_estreno - b.peli.anio_estreno);
+  ficha.replaceChildren(
+    el("h3", { class: "nombre", text: pe.nombre_persona }),
+    el("ul", { class: "etiquetas" }, el("li", { text: pe.nombre_nacionalidad }), el("li", { text: pe.nombre_sexo })),
+    el("table", {},
+      el("thead", {}, el("tr", {}, el("th", { text: "Película" }), el("th", { class: "num", text: "Año" }), el("th", { text: "Roles" }))),
+      el("tbody", {}, ...parts.map((pa) => el("tr", {},
+        el("td", {}, el("button", { type: "button", class: "enlace", text: pa.peli.titulo_pelicula,
+          onclick: () => elegirPelicula(pa.id_pelicula, true) })),
+        el("td", { class: "num", text: pa.peli.anio_estreno }),
+        el("td", { class: "chico", text: ORDEN_ROLES.filter((r) => pa.roles.includes(r)).join(", ") }),
+      )))),
+  );
+}
+function elegirPersona(id, irAVista = false) {
+  estado.personaElegida = id;
+  if (irAVista) {
+    estado.pNombre = ""; estado.pRol = "";
+    $("#p-nombre").value = ""; $("#p-rol").value = "";
+    mostrarVista("personas");
+  }
+  dibujarPersonas();
+  if (irAVista) $("#ficha-persona").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* ---------- Gráficos (SVG dibujado a mano, sin librerías) ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function s(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.append(e);
+  return e;
+}
+const tooltip = $("#tooltip");
+function conTooltip(marca, texto) {
+  const mostrar = (x, y) => { tooltip.textContent = texto; tooltip.classList.add("visible");
+    const r = tooltip.getBoundingClientRect();
+    tooltip.style.left = Math.min(x + 14, window.innerWidth - r.width - 8) + "px";
+    tooltip.style.top = Math.max(8, y - r.height - 12) + "px"; };
+  marca.addEventListener("mousemove", (e) => mostrar(e.clientX, e.clientY));
+  marca.addEventListener("mouseleave", () => tooltip.classList.remove("visible"));
+  marca.addEventListener("focus", () => { const r = marca.getBoundingClientRect(); mostrar(r.right, r.top); });
+  marca.addEventListener("blur", () => tooltip.classList.remove("visible"));
+  s("title", {}, marca).textContent = texto;
+}
+const anchoDe = (cont, minimo = 300) => Math.max(minimo, Math.floor(cont.getBoundingClientRect().width) || 600);
+function sinDatos(cont) {
+  cont.replaceChildren(el("p", { class: "vacio", text: "No hay películas con estos filtros." }));
+}
+
+function graficoDispersion(lista) {
+  const cont = $("#g-dispersion");
+  if (!lista.length) return sinDatos(cont);
+  const W = anchoDe(cont), H = Math.round(Math.min(440, Math.max(300, W * 0.55))), m = { t: 12, r: 16, b: 46, l: 64 };
+  const xmin = 1, xmax = 400, ymin = 5, ymax = 4000;
+  const lx = (v) => m.l + (Math.log10(v) - Math.log10(xmin)) / (Math.log10(xmax) - Math.log10(xmin)) * (W - m.l - m.r);
+  const ly = (v) => H - m.b - (Math.log10(v) - Math.log10(ymin)) / (Math.log10(ymax) - Math.log10(ymin)) * (H - m.t - m.b);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": "Dispersión de presupuesto y recaudación por película" });
+  for (const v of [1, 10, 100]) {
+    s("line", { class: "grilla", x1: lx(v), x2: lx(v), y1: m.t, y2: H - m.b }, svg);
+    s("text", { x: lx(v), y: H - m.b + 18, "text-anchor": "middle" }, svg).textContent = nf0.format(v);
+  }
+  for (const v of [10, 100, 1000]) {
+    s("line", { class: "grilla", x1: m.l, x2: W - m.r, y1: ly(v), y2: ly(v) }, svg);
+    s("text", { x: m.l - 8, y: ly(v) + 4, "text-anchor": "end" }, svg).textContent = nf0.format(v);
+  }
+  s("line", { class: "eje", x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b }, svg);
+  s("line", { class: "eje", x1: m.l, x2: m.l, y1: m.t, y2: H - m.b }, svg);
+  s("line", { x1: lx(ymin), y1: ly(ymin), x2: lx(xmax), y2: ly(xmax), stroke: "var(--tinta-2)", "stroke-dasharray": "4 4" }, svg);
+  s("text", { x: lx(30), y: ly(30) + 20, "text-anchor": "start" }, svg).textContent = "recaudación = presupuesto";
+  s("text", { x: (W + m.l - m.r) / 2, y: H - 6, "text-anchor": "middle" }, svg).textContent = "Presupuesto (millones de USD)";
+  s("text", { x: -(H - m.b + m.t) / 2, y: 16, transform: "rotate(-90)", "text-anchor": "middle" }, svg).textContent = "Recaudación (millones de USD)";
+  for (const p of lista) {
+    const c = s("circle", {
+      class: "marca", cx: lx(p.presupuesto / 1e6), cy: ly(p.recaudacion / 1e6), r: 6.5,
+      fill: COLORES_EPOCA[epoca(p.anio_estreno)], stroke: "#fff", "stroke-width": 1.5, tabindex: "0",
+    }, svg);
+    conTooltip(c, `${p.titulo_pelicula} (${p.anio_estreno}): presupuesto ${millones(p.presupuesto)} M USD, recaudación ${millones(p.recaudacion)} M USD, retorno ${nf1.format(p.retorno)} ×`);
+    c.addEventListener("click", () => elegirPelicula(p.id_pelicula, true));
+    c.addEventListener("keydown", (e) => { if (e.key === "Enter") elegirPelicula(p.id_pelicula, true); });
+  }
+  cont.replaceChildren(svg);
+  $("#g-dispersion-leyenda").replaceChildren(...EPOCAS.map((t, i) => {
+    const n = lista.filter((p) => epoca(p.anio_estreno) === i).length;
+    return el("li", {}, el("i", { style: `background:${COLORES_EPOCA[i]}` }), `${t} (${n})`);
+  }));
+}
+
+function barrasHorizontales(cont, filas, { formato, maximo, etiquetaAria }) {
+  if (!filas.length) return sinDatos(cont);
+  const W = anchoDe(cont), alto = 30, m = { t: 4, r: 120, b: 8, l: 130 };
+  const H = m.t + m.b + filas.length * alto;
+  const max = maximo ?? Math.max(...filas.map((f) => f.valor));
+  const ancho = (v) => (max ? v / max : 0) * (W - m.l - m.r);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": etiquetaAria });
+  filas.forEach((f, i) => {
+    const y = m.t + i * alto;
+    s("text", { x: m.l - 10, y: y + alto / 2 + 4, "text-anchor": "end", style: "fill:var(--tinta)" }, svg).textContent = f.nombre;
+    const w = Math.max(ancho(f.valor), f.valor > 0 ? 2 : 0);
+    const r = s("rect", { class: "marca", x: m.l, y: y + 6, width: w, height: alto - 12, rx: 3, fill: "var(--terciopelo)", tabindex: "0" }, svg);
+    conTooltip(r, f.detalle);
+    s("text", { x: m.l + w + 8, y: y + alto / 2 + 4, style: "fill:var(--tinta)" }, svg).textContent = formato(f);
+  });
+  cont.replaceChildren(svg);
+}
+
+function graficoGeneros(lista) {
+  const cuenta = new Map();
+  for (const p of lista) for (const g of p.generos) cuenta.set(g, (cuenta.get(g) || 0) + 1);
+  const filas = [...cuenta].map(([nombre, valor]) => ({
+    nombre, valor, detalle: `${nombre}: ${valor} ${valor === 1 ? "película" : "películas"}`,
+  })).sort((a, b) => b.valor - a.valor || a.nombre.localeCompare(b.nombre, "es"));
+  barrasHorizontales($("#g-generos"), filas, { formato: (f) => String(f.valor), etiquetaAria: "Cantidad de películas por género" });
+}
+
+function graficoDecadas(lista) {
+  const cont = $("#g-decadas");
+  if (!lista.length) return sinDatos(cont);
+  const grupos = new Map();
+  for (const p of lista) {
+    const d = Math.floor(p.anio_estreno / 10) * 10;
+    if (!grupos.has(d)) grupos.set(d, []);
+    grupos.get(d).push(p.puntuacion_promedio);
+  }
+  const filas = [...grupos].sort((a, b) => a[0] - b[0]).map(([d, v]) => ({ d, n: v.length, media: v.reduce((s2, x) => s2 + x, 0) / v.length }));
+  const W = anchoDe(cont), H = 300, m = { t: 22, r: 10, b: 40, l: 40 };
+  const ymin = 6, ymax = 10;
+  const y = (v) => H - m.b - (v - ymin) / (ymax - ymin) * (H - m.t - m.b);
+  const bw = (W - m.l - m.r) / filas.length;
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": "Puntuación media por década" });
+  for (const v of [6, 7, 8, 9, 10]) {
+    s("line", { class: "grilla", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }, svg);
+    s("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v;
+  }
+  filas.forEach((f, i) => {
+    const x = m.l + i * bw + bw * 0.2, w = bw * 0.6;
+    const r = s("rect", { class: "marca", x, y: y(f.media), width: w, height: y(ymin) - y(f.media), rx: 3, fill: "var(--terciopelo)", tabindex: "0" }, svg);
+    conTooltip(r, `Década de ${f.d}: puntuación media ${nf2.format(f.media)} (${f.n} ${f.n === 1 ? "película" : "películas"})`);
+    s("text", { x: x + w / 2, y: y(f.media) - 6, "text-anchor": "middle", style: "fill:var(--tinta)" }, svg).textContent = nf2.format(f.media);
+    s("text", { x: x + w / 2, y: H - m.b + 16, "text-anchor": "middle" }, svg).textContent = `${f.d}s`;
+    s("text", { x: x + w / 2, y: H - m.b + 31, "text-anchor": "middle", style: "font-size:11px" }, svg).textContent = `n = ${f.n}`;
+  });
+  s("line", { class: "eje", x1: m.l, x2: W - m.r, y1: y(ymin), y2: y(ymin) }, svg);
+  cont.replaceChildren(svg);
+}
+
+function graficoMujeres(lista) {
+  const ids = new Set(lista.map((p) => p.id_pelicula));
+  const filas = ORDEN_ROLES.map((rol) => {
+    const parts = DATOS.participaciones.filter((pa) => pa.nombre_rol === rol && ids.has(pa.id_pelicula));
+    const muj = parts.filter((pa) => porIdPersona.get(pa.id_persona).nombre_sexo === "Femenino").length;
+    return { nombre: rol, valor: parts.length ? (100 * muj) / parts.length : 0, muj, total: parts.length,
+      detalle: `${rol}: ${muj} de ${parts.length} participaciones son de mujeres` };
+  }).filter((f) => f.total > 0).sort((a, b) => b.valor - a.valor);
+  barrasHorizontales($("#g-mujeres"), filas, {
+    formato: (f) => `${nf1.format(f.valor)} % (${f.muj} de ${f.total})`, maximo: 100,
+    etiquetaAria: "Porcentaje de participaciones femeninas por rol",
+  });
+}
+
+/* ---------- Consultas ---------- */
+function dibujarConsultas() {
+  $("#consultas").replaceChildren(...DATOS.consultas.map((c) => {
+    const m = c.titulo.match(/^Consulta (\d+) \((.*)\)$/);
+    const n = m ? m[1] : "", como = m ? m[2] : c.titulo;
+    return el("details", { class: "panel consulta" },
+      el("summary", {}, el("span", { class: "n", text: n }),
+        el("span", {}, el("span", { class: "que", text: c.descripcion }), el("span", { class: "como", text: como }))),
+      el("div", { class: "consulta-cuerpo" },
+        el("pre", { text: c.sql }),
+        el("div", {},
+          el("p", { class: "cuantas", text: `${c.filas.length} ${c.filas.length === 1 ? "fila" : "filas"}` }),
+          el("div", { class: "tabla-scroll" }, el("table", {},
+            el("thead", {}, el("tr", {}, ...c.columnas.map((col) => el("th", { text: col })))),
+            el("tbody", {}, ...c.filas.map((f) => el("tr", {}, ...f.map((v) =>
+              el("td", { class: typeof v === "number" ? "num" : "", text: formatearValor(v) }))))))))),
+    );
+  }));
+}
+
+/* ---------- Vistas y filtros ---------- */
+const VISTAS_CON_FILTROS = ["peliculas", "graficos"];
+function mostrarVista(v) {
+  estado.vista = v;
+  document.querySelectorAll("#pestanas button").forEach((b) => {
+    const activa = b.dataset.vista === v;
+    b.setAttribute("aria-selected", String(activa));
+    b.tabIndex = activa ? 0 : -1;
+  });
+  document.querySelectorAll(".vista").forEach((sec) => { sec.hidden = sec.id !== "vista-" + v; });
+  const conFiltros = VISTAS_CON_FILTROS.includes(v);
+  $("#zona-filtros").hidden = !conFiltros;
+  if (v === "graficos") dibujarGraficos(peliculasFiltradas());
+  // recordar la pestaña en la dirección; en algunas vistas previas el navegador no lo permite
+  try { if (location.hash !== "#" + v) history.replaceState(null, "", "#" + v); } catch (e) { /* se ignora */ }
+}
+function dibujarGraficos(lista) {
+  graficoDispersion(lista); graficoGeneros(lista); graficoDecadas(lista); graficoMujeres(lista);
+}
+function limpiarFiltros(redibujar = true) {
+  estado.titulo = ""; estado.genero = ""; estado.desde = ANIO_MIN; estado.hasta = ANIO_MAX;
+  $("#f-titulo").value = ""; $("#f-genero").value = ""; $("#f-desde").value = ANIO_MIN; $("#f-hasta").value = ANIO_MAX;
+  if (redibujar) actualizar();
+}
+function actualizar() {
+  const lista = peliculasFiltradas();
+  dibujarCifras(lista);
+  dibujarTablaPeliculas(lista);
+  dibujarFichaPelicula();
+  const partes = [];
+  if (estado.titulo.trim()) partes.push(`título con "${estado.titulo.trim()}"`);
+  if (estado.genero) partes.push(`género ${estado.genero}`);
+  if (estado.desde !== ANIO_MIN || estado.hasta !== ANIO_MAX) partes.push(`estrenadas entre ${estado.desde} y ${estado.hasta}`);
+  $("#resumen-filtro").textContent = partes.length
+    ? `Mostrando ${lista.length} de ${peliculas.length} películas: ${partes.join(", ")}.`
+    : `Mostrando las ${peliculas.length} películas del catálogo.`;
+  if (estado.vista === "graficos") dibujarGraficos(lista);
+}
+
+function iniciar() {
+  const generos = [...new Set(peliculas.flatMap((p) => p.generos))].sort((a, b) => a.localeCompare(b, "es"));
+  $("#f-genero").append(...generos.map((g) => el("option", { value: g, text: g })));
+  $("#p-rol").append(...ORDEN_ROLES.map((r) => el("option", { value: r, text: r })));
+  for (const id of ["#f-desde", "#f-hasta"]) { $(id).min = ANIO_MIN; $(id).max = ANIO_MAX; }
+  $("#f-desde").value = ANIO_MIN; $("#f-hasta").value = ANIO_MAX;
+
+  $("#f-titulo").addEventListener("input", (e) => { estado.titulo = e.target.value; actualizar(); });
+  $("#f-genero").addEventListener("change", (e) => { estado.genero = e.target.value; actualizar(); });
+  $("#f-desde").addEventListener("input", (e) => { const v = parseInt(e.target.value, 10); estado.desde = Number.isNaN(v) ? ANIO_MIN : v; actualizar(); });
+  $("#f-hasta").addEventListener("input", (e) => { const v = parseInt(e.target.value, 10); estado.hasta = Number.isNaN(v) ? ANIO_MAX : v; actualizar(); });
+  $("#f-limpiar").addEventListener("click", () => limpiarFiltros());
+  $("#p-nombre").addEventListener("input", (e) => { estado.pNombre = e.target.value; dibujarPersonas(); });
+  $("#p-rol").addEventListener("change", (e) => { estado.pRol = e.target.value; dibujarPersonas(); });
+
+  document.querySelectorAll("#tabla-peliculas th[data-col] button").forEach((b) => b.addEventListener("click", () => {
+    const col = b.parentElement.dataset.col;
+    estado.orden = estado.orden.col === col ? { col, dir: -estado.orden.dir } : { col, dir: col === "titulo_pelicula" ? 1 : -1 };
+    dibujarTablaPeliculas(peliculasFiltradas());
+  }));
+  const tabs = [...document.querySelectorAll("#pestanas button")];
+  tabs.forEach((b, i) => {
+    b.addEventListener("click", () => mostrarVista(b.dataset.vista));
+    b.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const j = (i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+      tabs[j].focus(); mostrarVista(tabs[j].dataset.vista);
+    });
+  });
+
+  const masVotada = [...peliculas].sort((a, b) => b.cantidad_de_votos - a.cantidad_de_votos)[0];
+  estado.peliculaElegida = masVotada.id_pelicula;
+  dibujarPersonas();
+  dibujarConsultas();
+  actualizar();
+  const inicial = location.hash.slice(1);
+  mostrarVista(["peliculas", "personas", "graficos", "consultas"].includes(inicial) ? inicial : "peliculas");
+  $("#pie").textContent = `Datos generados con IA a partir de información pública; presupuestos, recaudaciones, puntuaciones y votos son aproximados. Tablero generado el ${DATOS.generado} desde la base PostgreSQL con generar_tablero.py.`;
+}
+iniciar();
+let esperaResize;
+window.addEventListener("resize", () => {
+  clearTimeout(esperaResize);
+  esperaResize = setTimeout(() => { if (estado.vista === "graficos") dibujarGraficos(peliculasFiltradas()); }, 150);
+});
+</script>
+</body>
+</html>
